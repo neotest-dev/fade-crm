@@ -1,0 +1,8 @@
+packages:
+  - '.'
+
+minimumReleaseAge: 0
+
+allowBuilds:
+  msw: true
+  sharp: true
