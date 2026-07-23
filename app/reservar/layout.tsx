@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Show, SignInButton, UserButton } from '@clerk/nextjs'
-import { Scissors, LogIn } from 'lucide-react'
+import { Scissors } from 'lucide-react'
 
 export const metadata: Metadata = {
   title: 'FADE Barber Shop — Reserva tu cita',
@@ -30,7 +29,7 @@ export default function ReservarLayout({
           </Link>
 
           {/* Nav */}
-          <nav className="hidden sm:flex items-center gap-1">
+          <nav className="flex items-center gap-1">
             {[
               { href: '/reservar', label: 'Inicio' },
               { href: '/reservar/servicios', label: 'Servicios' },
@@ -46,27 +45,6 @@ export default function ReservarLayout({
               </Link>
             ))}
           </nav>
-
-          {/* Auth */}
-          <div className="flex items-center gap-3">
-            <Show when="signed-out">
-              <SignInButton mode="redirect">
-                <button className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-[#c8a55a] border border-[#c8a55a]/30 hover:border-[#c8a55a] hover:bg-[#c8a55a]/5 px-3 py-1.5 rounded-sm transition-all">
-                  <LogIn size={13} />
-                  Ingresar
-                </button>
-              </SignInButton>
-            </Show>
-            <Show when="signed-in">
-              <UserButton
-                appearance={{
-                  elements: {
-                    avatarBox: 'w-8 h-8 rounded-sm',
-                  },
-                }}
-              />
-            </Show>
-          </div>
         </div>
 
         {/* Mobile nav */}

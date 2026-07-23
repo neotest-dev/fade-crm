@@ -1,7 +1,6 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { DM_Sans, Playfair_Display } from 'next/font/google'
-import { ClerkProvider } from '@clerk/nextjs'
 import { SidebarProvider } from '@/components/sidebar-context'
 import './globals.css'
 
@@ -40,17 +39,15 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <ClerkProvider>
-      <html lang="es" className="dark">
-        <body
-          className={`${playfair.variable} ${dmSans.variable} antialiased bg-[#0a0a0a] text-[#e8e8e8] font-[family-name:var(--font-body)]`}
-        >
-          <SidebarProvider>
-            {children}
-          </SidebarProvider>
-          {process.env.NODE_ENV === 'production' && <Analytics />}
-        </body>
-      </html>
-    </ClerkProvider>
+    <html lang="es" className="dark">
+      <body
+        className={`${playfair.variable} ${dmSans.variable} antialiased bg-[#0a0a0a] text-[#e8e8e8] font-[family-name:var(--font-body)]`}
+      >
+        <SidebarProvider>
+          {children}
+        </SidebarProvider>
+        {process.env.NODE_ENV === 'production' && <Analytics />}
+      </body>
+    </html>
   )
 }

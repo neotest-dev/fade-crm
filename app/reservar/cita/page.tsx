@@ -2,7 +2,6 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useUser } from '@clerk/nextjs';
 import { supabase } from '@/lib/supabase';
 import { Check, ChevronRight, Clock, Scissors, User, Calendar, AlertCircle } from 'lucide-react';
 
@@ -10,7 +9,7 @@ import { Check, ChevronRight, Clock, Scissors, User, Calendar, AlertCircle } fro
 
 interface Servicio { id: string; nombre: string; precio: number; duracion_min: number; }
 interface Barbero { id: string; nombre: string; }
-interface ClienteExistente { id: string; nombre: string; telefono: string; clerk_id: string | null; }
+interface ClienteExistente { id: string; nombre: string; telefono: string; }
 
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
@@ -77,7 +76,6 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
 function CitaForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, isLoaded } = useUser();
 
   const [step, setStep] = useState(1);
   const [error, setError] = useState('');
@@ -104,8 +102,6 @@ function CitaForm() {
 
   // ── Init ──────────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!isLoaded || !user) return;
-
     const preservicioId = searchParams.get('servicio');
 
     // Load services and barberos in parallel
@@ -120,27 +116,7 @@ function CitaForm() {
         if (pre) setSelectedServicio(pre);
       }
     });
-
-    // Fetch or seed client
-    initCliente();
-  }, [isLoaded, user]);
-
-  const initCliente = async () => {
-    if (!user) return;
-    setNombreCliente(user.fullName || user.firstName || '');
-
-    const { data: existing } = await supabase
-      .from('clientes')
-      .select('*')
-      .eq('clerk_id', user.id)
-      .maybeSingle();
-
-    if (existing) {
-      setClienteId(existing.id);
-      setTelefono(existing.telefono || '');
-      setNombreCliente(existing.nombre);
-    }
-  };
+  }, [searchParams]);
 
   // ── Step 1: Check / Create cliente ────────────────────────────────────────
   const handleStep1 = async (e: React.FormEvent) => {
@@ -149,33 +125,29 @@ function CitaForm() {
     setLoading(true);
     try {
       if (!telefono || telefono.length < 9) throw new Error('Ingresa un teléfono válido.');
+      if (!nombreCliente.trim()) throw new Error('Ingresa tu nombre.');
 
-      if (clienteId) {
-        // Update phone if changed
-        await supabase.from('clientes').update({ telefono }).eq('id', clienteId);
+      let targetId = clienteId;
+
+      if (targetId) {
+        await supabase.from('clientes').update({ nombre: nombreCliente, telefono }).eq('id', targetId);
       } else {
-        // Check for existing cita activa by any means
-        const { data: created, error: err } = await supabase
-          .from('clientes')
-          .insert([{ nombre: nombreCliente, telefono, clerk_id: user!.id }])
-          .select()
-          .single();
-        if (err) {
-          // Might already exist by phone — link
-          const { data: byPhone } = await supabase.from('clientes').select('*').eq('telefono', telefono).maybeSingle();
-          if (byPhone) {
-            await supabase.from('clientes').update({ clerk_id: user!.id }).eq('id', byPhone.id);
-            setClienteId(byPhone.id);
-          } else {
-            throw err;
-          }
+        const { data: byPhone } = await supabase.from('clientes').select('*').eq('telefono', telefono).maybeSingle();
+        if (byPhone) {
+          await supabase.from('clientes').update({ nombre: nombreCliente }).eq('id', byPhone.id);
+          targetId = byPhone.id;
         } else {
-          setClienteId(created.id);
+          const { data: created, error: err } = await supabase
+            .from('clientes')
+            .insert([{ nombre: nombreCliente, telefono }])
+            .select()
+            .single();
+          if (err) throw err;
+          targetId = created.id;
         }
+        setClienteId(targetId);
       }
 
-      // Check limit: 1 cita activa
-      const targetId = clienteId || (await supabase.from('clientes').select('id').eq('clerk_id', user!.id).maybeSingle()).data?.id;
       if (targetId) {
         const { data: activeCitas } = await supabase
           .from('citas')
@@ -183,9 +155,8 @@ function CitaForm() {
           .eq('cliente_id', targetId)
           .in('estado', ['pendiente', 'confirmada']);
         if ((activeCitas?.length || 0) >= 1) {
-          throw new Error('Ya tienes una cita activa. Espera a que se complete o cancela la actual.');
+          throw new Error('Ya tienes una cita activa con este teléfono. Espera a que se complete o cancela la actual.');
         }
-        setClienteId(targetId);
       }
 
       setStep(2);
@@ -265,10 +236,6 @@ function CitaForm() {
       setLoading(false);
     }
   };
-
-  if (!isLoaded) {
-    return <div className="flex justify-center py-24"><div className="spinner" /></div>;
-  }
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-12">

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
 import { supabase } from '@/lib/supabase';
 import { ShoppingBag, Package, AlertCircle, Check } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
@@ -17,7 +16,6 @@ interface Producto {
 const WHATSAPP_NUMBER = ''; // Fill with the business phone number
 
 export default function ProductosPortalPage() {
-  const { user } = useUser();
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
   const [reservando, setReservando] = useState<string | null>(null);
@@ -37,51 +35,14 @@ export default function ProductosPortalPage() {
   }, []);
 
   const handleReservar = async (producto: Producto) => {
-    if (!user) return;
     setError('');
     setReservando(producto.id);
 
     try {
-      // 1. Get or create client
-      const { data: cliente } = await supabase
-        .from('clientes')
-        .select('id')
-        .eq('clerk_id', user.id)
-        .maybeSingle();
-
-      if (!cliente) {
-        throw new Error('Primero debes completar una reserva de cita para registrar tus datos.');
-      }
-
-      // 2. Deduct 1 from stock
-      const { error: stockError } = await supabase
-        .from('productos')
-        .update({ stock: producto.stock - 1 })
-        .eq('id', producto.id)
-        .eq('stock', producto.stock); // optimistic lock
-
-      if (stockError) throw new Error('El producto ya no está disponible.');
-
-      // 3. Register sale in ventas
-      await supabase.from('ventas').insert([{
-        cliente_id: cliente.id,
-        producto_id: producto.id,
-        servicio_id: null,
-        barbero_id: null,
-        monto: producto.precio,
-        fecha: new Date().toISOString().split('T')[0],
-      }]);
-
-      // 4. Update local state
-      setProductos((prev) =>
-        prev.map((p) => p.id === producto.id ? { ...p, stock: p.stock - 1 } : p)
-          .filter((p) => p.stock > 0)
-      );
       setReservados((prev) => new Set([...prev, producto.id]));
 
-      // 5. Open WhatsApp
       const msg = encodeURIComponent(
-        `Hola! Acabo de reservar el producto: *${producto.nombre}* (S/ ${producto.precio}). Mi nombre es ${user.fullName || user.firstName}. ¿Cómo coordino el pago y la entrega?`
+        `Hola! Quisiera reservar el producto: *${producto.nombre}* (S/ ${producto.precio}). ¿Cómo coordino el pago y la entrega?`
       );
       const waUrl = WHATSAPP_NUMBER
         ? `https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`
