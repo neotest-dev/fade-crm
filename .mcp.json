@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "codebase-memory": {
+      "command": "C:\\Users\\neotestdev\\AppData\\Local\\Programs\\codebase-memory-mcp\\codebase-memory-mcp.exe",
+      "args": [
+        "--ui=true",
+        "--port=9749",
+        "c:\\Users\\neotestdev\\antigravity\\fade-crm"
+      ]
+    }
+  }
+}
